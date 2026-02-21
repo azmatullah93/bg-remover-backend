@@ -1,0 +1,35 @@
+# Virtual env and Python cache
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Environment and secrets (never bake into image)
+.env
+.env.*
+!.env.example
+
+# IDE, git, OS
+.git/
+.gitignore
+.vscode/
+.idea/
+*.md
+.DS_Store
+Thumbs.db
+
+# Test and dev
+tests/
+pytest.ini
+.coverage
+htmlcov/
+.pytest_cache/
+*.log
+
+# Deployment config (small files; kept in context for builds)

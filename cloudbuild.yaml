@@ -1,0 +1,66 @@
+# Google Cloud Build - build and deploy to Cloud Run
+# Run from backend directory: gcloud builds submit --config cloudbuild.yaml .
+#
+# Prerequisites:
+#   gcloud auth login
+#   gcloud config set project YOUR_PROJECT_ID
+#   gcloud services enable cloudbuild.googleapis.com run.googleapis.com containerregistry.googleapis.com
+
+substitutions:
+  _SERVICE_NAME: rmbg-backend
+  _REGION: us-central1
+
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "build"
+      - "-t"
+      - "gcr.io/${PROJECT_ID}/${_SERVICE_NAME}:$SHORT_SHA"
+    dir: "backend"
+      - "-t"
+      - "gcr.io/${PROJECT_ID}/${_SERVICE_NAME}:latest"
+      - "."
+
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "push"
+      - "gcr.io/${PROJECT_ID}/${_SERVICE_NAME}:$SHORT_SHA"
+
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "push"
+      - "gcr.io/${PROJECT_ID}/${_SERVICE_NAME}:latest"
+
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: "gcloud"
+    args:
+      - "run"
+      - "deploy"
+      - "${_SERVICE_NAME}"
+      - "--image"
+      - "gcr.io/${PROJECT_ID}/${_SERVICE_NAME}:$SHORT_SHA"
+      - "--region"
+      - "${_REGION}"
+      - "--platform"
+      - "managed"
+      - "--allow-unauthenticated"
+      - "--memory"
+      - "2Gi"
+      - "--cpu"
+      - "2"
+      - "--timeout"
+      - "300"
+      # Set CORS_ORIGINS to your frontend URL after first deploy:
+      # gcloud run services update rmbg-backend --region us-central1 --set-env-vars "CORS_ORIGINS=https://your-frontend.com"
+    dir: "backend"
+      - "--min-instances"
+      - "0"
+      - "--max-instances"
+      - "10"
+
+images:
+  - "gcr.io/${PROJECT_ID}/${_SERVICE_NAME}:$SHORT_SHA"
+  - "gcr.io/${PROJECT_ID}/${_SERVICE_NAME}:latest"
+
+options:
+  logging: CLOUD_LOGGING_ONLY
