@@ -1,0 +1,43 @@
+# Render Blueprint — Backend (Background Removal API)
+# Deploy via: Dashboard → New → Blueprint → set Blueprint Path to "backend/render.yaml"
+# See DEPLOYMENT.md for full instructions
+
+services:
+  - type: web
+    name: rmbg-backend
+    runtime: docker
+
+    # Paths relative to rootDir (backend/)
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+
+    # rembg + u2net needs ~2GB; Free/Starter (512MB) may OOM — use MODEL_NAME=u2netp to try
+    plan: standard
+
+    region: oregon
+
+    # Health check for zero-downtime deploys
+    healthCheckPath: /health
+
+    # Graceful shutdown: allow in-flight requests to finish (model unload, etc.)
+    maxShutdownDelaySeconds: 60
+
+    # Only deploy when backend changes
+    buildFilter:
+      paths:
+        - backend/**/*
+
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: CUDA_VISIBLE_DEVICES
+        value: ""
+      - key: CORS_ORIGINS
+        sync: false
+      - key: MAX_FILE_SIZE_MB
+        value: "8"
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "10"
+      - key: MODEL_NAME
+        value: u2net
