@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import time
 
@@ -11,7 +12,7 @@ from app.utils.file_utils import InvalidImageError, validate_content_type, valid
 
 logger = logging.getLogger("app")
 router = APIRouter()
-start_time = time.perf_counter()
+start_time = time.time()
 
 
 @router.get("/health")
@@ -23,7 +24,7 @@ async def health():
 @router.get("/status")
 @limiter.exempt
 async def status():
-    uptime_seconds = time.perf_counter() - start_time
+    uptime_seconds = time.time() - start_time
     return {
         "status": "ok",
         "uptime_seconds": round(uptime_seconds, 2),
@@ -58,8 +59,12 @@ async def remove_bg(
             detail="Background removal service is initializing. Please retry shortly.",
         )
 
+    # Run CPU-intensive sync operation in thread pool to avoid blocking event loop
     try:
-        stream = remove_background_stream(content, session)
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(
+            None, remove_background_stream, content, session
+        )
     except InvalidImageError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -70,7 +75,7 @@ async def remove_bg(
         )
 
     return StreamingResponse(
-        stream,
+        iter([result]),
         media_type="image/png",
         headers={"Content-Disposition": "attachment; filename=removed-bg.png"},
     )

@@ -1,5 +1,6 @@
 import logging
 from contextlib import asynccontextmanager
+from typing import Callable
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -43,19 +44,22 @@ app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=config.allowed_origins_list,
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 app.middleware("http")(log_requests)
 
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next: Callable):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    return response
+
 app.include_router(router, prefix="/api", tags=["api"])
-
-
-@app.get("/health")
-async def root_health():
-    return {"status": "ok"}
 
 
 @app.exception_handler(Exception)
